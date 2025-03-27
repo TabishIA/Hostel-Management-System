@@ -12,6 +12,7 @@ This repository contains the backend and database foundation for a digital hoste
   - API Endpoints: Basic routes for complaints and leaves.
 
 ## Project Structure
+```markdown
 Hostel-Management-System/
 ├── backend/                # Node.js/Express backend
 │   ├── config/             # Database connection (db.js)
@@ -27,6 +28,7 @@ Hostel-Management-System/
 ├── frontend/               # Placeholder for React frontend
 ├── .gitignore              # Ignores node_modules, .env
 └── README.md               # This file
+```
 
 ## Prerequisites
 Before starting, install these tools:
@@ -42,7 +44,7 @@ Get the code on your machine:
 ```bash
 git clone https://github.com/TabishIA/Hostel-Management-System.git
 cd Hostel-Management-System
-```
+
 
 ### Step 2: Set Up PostgreSQL Database
 1. **Install PostgreSQL**:
