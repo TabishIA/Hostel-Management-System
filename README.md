@@ -44,7 +44,7 @@ Get the code on your machine:
 ```bash
 git clone https://github.com/TabishIA/Hostel-Management-System.git
 cd Hostel-Management-System
-
+```
 
 ### Step 2: Set Up PostgreSQL Database
 1. **Install PostgreSQL**:
