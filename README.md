@@ -1,4 +1,4 @@
-```markdown
+
 # Hostel Management System
 
 This repository contains the backend and database foundation for a digital hostel management system. My work includes the PostgreSQL database setup and authentication system using Node.js and Express.js. Follow these steps to get it running and start building on it.
