@@ -1,7 +1,3 @@
-Below is a complete `README.md` file with all the necessary steps for your team to set up and use the database and authentication system you’ve built. This version consolidates everything we’ve covered—cloning the repo, setting up PostgreSQL, configuring the backend, registering users, testing the API, and optional seeding—into a single, actionable guide. You can add this directly to your `Hostel-Management-System` repository.
-
----
-
 ### `README.md`
 
 ```markdown
