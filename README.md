@@ -1,12 +1,4 @@
-Below is a complete `README.md` file with all the necessary steps for your team to set up and use the database and authentication system you’ve built. This version consolidates everything we’ve covered—cloning the repo, setting up PostgreSQL, configuring the backend, registering users, testing the API, and optional seeding—into a single, actionable guide. You can add this directly to your `Hostel-Management-System` repository.
-
----
-
-### `README.md`
-
 # Hostel Management System
-
-This repository contains the backend and database foundation for a digital hostel management system. My work includes the PostgreSQL database setup and authentication system using Node.js and Express.js. Follow these steps to get it running and start building on it.
 
 ## Project Overview
 - **Purpose**: Streamline hostel operations (complaints, leaves, etc.).
@@ -230,12 +222,3 @@ Add sample complaints/leaves after registering users:
 - **Invalid Credentials**: Re-register users if login fails.
 - **API Errors**: Ensure server is running and tokens are valid (they expire after 1 hour).
 - **Path Issues**: Adjust file paths in commands to match your system.
-
-## Next Steps for the Team
-- **Frontend**: Build the React app in `frontend/` to connect to these endpoints.
-- **Expand API**: Add routes for canteen, attendance, etc., in `backend/routes/`.
-- **Test**: Use Postman to verify all endpoints work as expected.
-
-## Contact
-Questions? Reach out to [TabishIA](https://github.com/TabishIA) on GitHub.
-```
