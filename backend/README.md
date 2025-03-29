@@ -10,3 +10,9 @@
 - **Leaves**: `/api/leaves` (GET, POST)
 
 # .env Format
+
+### Room Allotment
+- **POST /api/rooms**: Add a room (admin only).
+- **PUT /api/rooms/assign**: Assign a student to a room (admin only).
+- **GET /api/rooms**: View all rooms (admin only).
+- **GET /api/rooms/my-room**: View assigned room (any user).

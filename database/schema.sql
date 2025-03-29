@@ -24,3 +24,15 @@ CREATE TABLE leaves (
     end_date DATE NOT NULL,
     status VARCHAR(20) DEFAULT 'pending'
 );
+
+-- Create Rooms table
+CREATE TABLE rooms (
+    id SERIAL PRIMARY KEY,          -- Unique room ID
+    room_number VARCHAR(10) UNIQUE NOT NULL,  -- e.g., "101", "A-12"
+    capacity INTEGER NOT NULL CHECK (capacity > 0),  -- Max students allowed
+    description TEXT                -- Optional details (e.g., "Near canteen")
+);
+
+-- Add room_id to Users table to link students to rooms
+ALTER TABLE users
+ADD COLUMN room_id INTEGER REFERENCES rooms(id) ON DELETE SET NULL;
