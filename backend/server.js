@@ -6,6 +6,9 @@ const leaveRoutes = require('./routes/leaves');
 const roomRoutes = require('./routes/rooms');
 const attendanceRoutes = require('./routes/attendance'); 
 
+require('dotenv').config();
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+
 const app = express();
 app.use(express.json());
 

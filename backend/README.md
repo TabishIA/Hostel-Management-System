@@ -5,50 +5,115 @@
 4. `node server.js`
 
 # API Endpoints
-- **Users**: `/api/users/register`, `/api/users/login`
-- **Complaints**: `/api/complaints` (GET, POST)
-- **Leaves**: `/api/leaves` (GET, POST)
+
+## Users
+- **Add Student (Warden)**: `POST /api/users/add-student` (Warden-only)
+  ```json
+  {
+      "username": "REG123",           // Required: College registration number
+      "name": "John Doe",             // Required
+      "roll_number": "R123",          // Required: Must be unique
+      "mobile_number": "971501234567", // Required
+      "email": "john.doe@example.com", // Required: Must be unique
+      "family_contact": "971509876543", // Optional
+      "branch": "CSE",                // Required: 'CSE', 'IT', 'ENTC', 'ECE', 'AI&DS'
+      "class": "SE5",                 // Required: FE1-11, SE1-11, TE1-11
+      "room_number": "101"            // Optional: Room number from rooms table
+  }
+  ```
+  - Initial password is the same as `username` (e.g., "REG123").
+- **Add Warden (Warden)**: `POST /api/users/add-warden` (Warden-only)
+  ```json
+  {
+      "username": "WARDEN002",        // Required
+      "name": "Warden Two",           // Required
+      "roll_number": "W002",          // Required: Must be unique
+      "mobile_number": "971501234568", // Required
+      "email": "warden.two@example.com", // Required: Must be unique
+      "family_contact": "971509876544" // Optional
+  }
+  ```
+  - Initial password is the same as `username` (e.g., "WARDEN002").
+- **Login**: `POST /api/users/login`
+  ```json
+  {"username": "REG123", "password": "REG123"}
+  ```
+  - Response: `{"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}`
+- **View Profile**: `GET /api/users/profile` (Authenticated users)
+  - Response: `{"username": "REG123", "name": "John Doe", "roll_number": "R123", "mobile_number": "971501234567", "email": "john.doe@example.com", "family_contact": "971509876543", "branch": "CSE", "class": "SE5", "room_number": "101", "role": "student"}`
+- **Request OTP**: `POST /api/users/request-otp` (Authenticated users)
+  - Sends a 6-digit OTP to the user’s registered email.
+  - Response: `{"message": "OTP sent to your email"}`
+- **Change Password**: `POST /api/users/change-password` (Authenticated users)
+  ```json
+  {"otp": "123456", "new_password": "MyNewPass123"}
+  ```
+  - OTP must match the one sent and be used within 10 minutes.
+  - Response: `{"message": "Password changed successfully"}`
+
+## Attendance
+- **View Today’s Attendance (Warden)**: `GET /api/attendance` (Warden-only)
+  ```json
+  [{"username": "REG123", "name": "John Doe", "room_number": "101", "status": "absent"}]
+  ```
+- **Mark Attendance (Warden)**: `PUT /api/attendance/mark` (Warden-only)
+  ```json
+  {"username": "REG123", "status": "present", "date": "2025-04-01"} // date optional, defaults to today
+  ```
+- **Attendance History (Warden)**: `GET /api/attendance/history?start_date=2025-03-01&end_date=2025-04-01` (Warden-only)
+  ```json
+  [{"username": "REG123", "name": "John Doe", "date": "2025-04-01", "status": "present"}]
+  ```
+
+## Rooms
+- **Add a Room (Warden)**: `POST /api/rooms` (Warden-only)
+  ```json
+  {"room_number": "101", "capacity": 2, "description": "Double room"}
+  ```
+- **Assign Student to Room (Warden)**: `PUT /api/rooms/assign` (Warden-only)
+  ```json
+  {"username": "REG123", "room_number": "101"}
+  ```
+- **Unassign/Move Student (Warden)**: `PUT /api/rooms/unassign` (Warden-only)
+  ```json
+  {"username": "REG123", "new_room_number": "102"} // omit new_room_number to unassign
+  ```
+- **View All Rooms (Warden)**: `GET /api/rooms` (Warden-only)
+  ```json
+  [{"room_number": "101", "capacity": 2, "description": "Double room", "occupants": [{"username": "REG123", "name": "John Doe"}], "occupant_count": 1}]
+  ```
+- **View My Room (Student/Warden)**: `GET /api/rooms/my-room` (Authenticated users)
+  ```json
+  {"room_number": "101", "capacity": 2, "description": "Double room"}
+  ```
+
+## Complaints
+- **View Complaints**: `GET /api/complaints`
+- **Submit Complaint**: `POST /api/complaints`
+  - *Note*: Placeholder—implement as needed.
+
+## Leaves
+- **View Leaves**: `GET /api/leaves`
+- **Submit Leave**: `POST /api/leaves`
+  - *Note*: Placeholder—implement as needed.
 
 # .env Format
+Create a `.env` file in the `backend/` directory with:
+```
+PORT=5000
+DB_HOST=localhost
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_NAME=hostel_management
+JWT_SECRET=your_jwt_secret
+EMAIL_USER=hosteltestbot@gmail.com    # Gmail account that sends OTPs
+EMAIL_PASS=abcdefghijklmnop           # App Password for EMAIL_USER (no spaces)
+```
 
-### Room Allotment
-- **POST /api/rooms**: Add a room (admin only).
-- **PUT /api/rooms/assign**: Assign a student to a room (admin only).
-- **GET /api/rooms**: View all rooms (admin only).
-- **GET /api/rooms/my-room**: View assigned room (any user).
+- **Notes**:
+  - Replace `your_password` with your PostgreSQL password.
+  - Update `JWT_SECRET` to a secure string (e.g., `openssl rand -hex 32`).
+  - `EMAIL_USER` and `EMAIL_PASS` must be a valid Gmail account with an App Password for sending OTP emails.
+  - Generate an App Password at `myaccount.google.com` → Security → App Passwords after enabling 2FA.
 
-- **Rooms**:
-  - **Unassign/Move Student (Admin)**: PUT `/api/rooms/unassign`
-    ```json
-    {
-        "user_id": 2,            // Required: Student to unassign/move
-        "new_room_id": 1         // Optional: Move to this room; omit to unassign
-    }
-
-View All Rooms (Admin): GET /api/rooms (Now includes occupants and count)
-
-[
-    {
-        "id": 1,
-        "room_number": "101",
-        "capacity": 2,
-        "description": "Double room",
-        "occupants": [{"id": 2, "username": "student1"}],
-        "occupant_count": 1
-    },
-    ...
-]
-
-### Attendance
-
-  - **View Today’s Attendance (Admin)**: GET `/api/attendance`
-    ```json
-    [{"id": 2, "username": "student1", "room_id": 1, "status": "absent"}, ...]
-
- - **Mark Attendance (Admin)**: PUT /api/attendance/mark
-
-{ "user_id": 2, "status": "present", "date": "2025-03-30" } // date optional
-
- - **Attendance History (Admin)**: GET /api/attendance/history?start_date=2025-03-01&end_date=2025-03-31
-
-[{"id": 2, "username": "student1", "date": "2025-03-30", "status": "present"}, ...]
+```
