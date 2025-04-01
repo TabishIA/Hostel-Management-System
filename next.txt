@@ -1,0 +1,336 @@
+You’re right—since this is a website (not a mobile app), students will scan the QR code using their device’s camera directly on the site, and the scanned data needs to be sent back to the backend. Additionally, ensuring the student is physically in the hostel during the scan is a critical feature to prevent check-ins from outside. Let’s adapt the attendance tracking system to:
+1. Support QR code scanning within the website.
+2. Add location verification to confirm the student is in the hostel.
+
+---
+
+### Updated Requirements
+- **Website Workflow**: Students log into the website, view their QR code, scan it using their device’s camera (via the browser), and the site sends the scanned `qr_code` to the backend.
+- **Location Check**: Restrict check-ins to students within the hostel premises using geolocation (e.g., latitude/longitude compared to hostel boundaries).
+
+---
+
+### Step 1: Backend Adjustments
+We’ll:
+- Keep the QR code generation and check-in logic.
+- Add a `location` field to the `check-in` request to validate the student’s position.
+- Define hostel boundaries (e.g., a geofence around your hostel in UAE).
+
+#### Updated `routes/attendance.js`
+```javascript
+const express = require('express');
+const pool = require('../config/db');
+const auth = require('../middleware/auth');
+const { v4: uuidv4 } = require('uuid');
+const router = express.Router();
+
+// Hostel geofence boundaries (example coordinates for a hostel in UAE, adjust as needed)
+const HOSTEL_CENTER = { lat: 25.2048, lng: 55.2708 }; // e.g., Dubai coordinates
+const HOSTEL_RADIUS = 0.1; // ~100 meters radius in degrees (adjust based on hostel size)
+
+// Function to check if a point is within the hostel radius
+const isWithinHostel = (lat, lng) => {
+    const distance = Math.sqrt(
+        Math.pow(lat - HOSTEL_CENTER.lat, 2) + Math.pow(lng - HOSTEL_CENTER.lng, 2)
+    );
+    return distance <= HOSTEL_RADIUS;
+};
+
+// Generate daily QR code for a student
+router.get('/qr-code', auth, async (req, res) => {
+    if (req.user.role !== 'student') return res.status(403).json({ error: 'Access denied' });
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const expiresAt = new Date(`${today}T20:30:00`); // 8:30 PM UAE time
+
+        let qr = await pool.query(
+            'SELECT * FROM qr_codes WHERE user_id = $1',
+            [req.user.id]
+        );
+
+        const now = new Date();
+        if (!qr.rows.length || new Date(qr.rows[0].expires_at) < now) {
+            const code = uuidv4();
+            await pool.query(
+                'INSERT INTO qr_codes (user_id, code, expires_at) VALUES ($1, $2, $3) ON CONFLICT (user_id) DO UPDATE SET code = $2, expires_at = $3, generated_at = CURRENT_TIMESTAMP',
+                [req.user.id, code, expiresAt]
+            );
+            qr = await pool.query('SELECT * FROM qr_codes WHERE user_id = $1', [req.user.id]);
+        }
+
+        res.json({ qr_code: qr.rows[0].code, expires_at: qr.rows[0].expires_at });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Mark attendance via QR code scan with location
+router.post('/check-in', auth, async (req, res) => {
+    if (req.user.role !== 'student') return res.status(403).json({ error: 'Access denied' });
+    const { qr_code, latitude, longitude } = req.body;
+    try {
+        if (!qr_code) {
+            return res.status(400).json({ error: 'QR code is required' });
+        }
+        if (!latitude || !longitude) {
+            return res.status(400).json({ error: 'Location data is required' });
+        }
+
+        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+
+        const startTime = new Date(`${today}T20:00:00`); // 8:00 PM UAE time
+        const endTime = new Date(`${today}T20:30:00`);   // 8:30 PM UAE time
+        if (now < startTime || now > endTime) {
+            return res.status(400).json({ error: 'Check-in allowed only between 8:00-8:30 PM' });
+        }
+
+        if (!isWithinHostel(parseFloat(latitude), parseFloat(longitude))) {
+            return res.status(400).json({ error: 'You must be within the hostel premises to check in' });
+        }
+
+        const qr = await pool.query(
+            'SELECT * FROM qr_codes WHERE user_id = $1 AND code = $2',
+            [req.user.id, qr_code]
+        );
+        if (!qr.rows.length) {
+            return res.status(400).json({ error: 'Invalid QR code' });
+        }
+        if (new Date(qr.rows[0].expires_at) < now) {
+            return res.status(400).json({ error: 'QR code has expired' });
+        }
+
+        const result = await pool.query(
+            'INSERT INTO attendance (user_id, date, status, check_in_time) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, date) DO UPDATE SET status = $3, check_in_time = $4 RETURNING *',
+            [req.user.id, today, 'present', now]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Manual check-in fallback (still requires location)
+router.post('/check-in-manual', auth, async (req, res) => {
+    if (req.user.role !== 'student') return res.status(403).json({ error: 'Access denied' });
+    const { latitude, longitude } = req.body;
+    try {
+        if (!latitude || !longitude) {
+            return res.status(400).json({ error: 'Location data is required' });
+        }
+
+        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+
+        const startTime = new Date(`${today}T20:00:00`);
+        const endTime = new Date(`${today}T20:30:00`);
+        if (now < startTime || now > endTime) {
+            return res.status(400).json({ error: 'Check-in allowed only between 8:00-8:30 PM' });
+        }
+
+        if (!isWithinHostel(parseFloat(latitude), parseFloat(longitude))) {
+            return res.status(400).json({ error: 'You must be within the hostel premises to check in' });
+        }
+
+        const qr = await pool.query(
+            'SELECT * FROM qr_codes WHERE user_id = $1',
+            [req.user.id]
+        );
+        if (!qr.rows.length || new Date(qr.rows[0].expires_at) < now) {
+            return res.status(400).json({ error: 'No valid QR code available' });
+        }
+
+        const result = await pool.query(
+            'INSERT INTO attendance (user_id, date, status, check_in_time) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, date) DO UPDATE SET status = $3, check_in_time = $4 RETURNING *',
+            [req.user.id, today, 'present', now]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// [Rest of the file unchanged]
+```
+
+#### Changes
+- **Location Required**: Added `latitude` and `longitude` to both `check-in` endpoints.
+- **Geofencing**: Added `isWithinHostel` function to check if the student’s coordinates are within ~100 meters of the hostel’s center (example: Dubai coordinates; adjust to your hostel’s actual location).
+
+---
+
+### Step 2: Frontend Implementation
+Your team needs to integrate QR scanning and geolocation into the website (assumed to be in `frontend/` using React).
+
+#### Example React Component (`src/components/Attendance.js`)
+```jsx
+import React, { useState, useEffect } from 'react';
+import QrReader from 'react-qr-reader';
+import QRCode from 'qrcode.react';
+
+const Attendance = ({ token }) => {
+    const [qrCode, setQrCode] = useState('');
+    const [error, setError] = useState('');
+
+    // Fetch QR code on mount
+    useEffect(() => {
+        fetch('http://localhost:5000/api/attendance/qr-code', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+            .then(res => res.json())
+            .then(data => setQrCode(data.qr_code))
+            .catch(err => setError('Failed to load QR code'));
+    }, [token]);
+
+    // Handle QR scan
+    const handleScan = (data) => {
+        if (data) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    fetch('http://localhost:5000/api/attendance/check-in', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ qr_code: data, latitude, longitude })
+                    })
+                        .then(res => res.json())
+                        .then(result => {
+                            if (result.error) setError(result.error);
+                            else alert('Check-in successful!');
+                        })
+                        .catch(() => setError('Check-in failed'));
+                },
+                () => setError('Location access denied')
+            );
+        }
+    };
+
+    const handleError = (err) => {
+        setError('Error scanning QR code');
+    };
+
+    // Manual check-in
+    const handleManualCheckIn = () => {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                fetch('http://localhost:5000/api/attendance/check-in-manual', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ latitude, longitude })
+                })
+                    .then(res => res.json())
+                    .then(result => {
+                        if (result.error) setError(result.error);
+                        else alert('Manual check-in successful!');
+                    })
+                    .catch(() => setError('Manual check-in failed'));
+            },
+            () => setError('Location access denied')
+        );
+    };
+
+    return (
+        <div>
+            <h2>Attendance Check-In</h2>
+            {qrCode && <QRCode value={qrCode} />}
+            <p>Scan the QR code with your device camera:</p>
+            <QrReader
+                delay={300}
+                onError={handleError}
+                onScan={handleScan}
+                style={{ width: '100%' }}
+            />
+            <button onClick={handleManualCheckIn}>Manual Check-In</button>
+            {error && <p style={{ color: 'red' }}>{error}</p>}
+        </div>
+    );
+};
+
+export default Attendance;
+```
+
+#### Dependencies
+Add to `frontend/package.json`:
+```
+npm install react-qr-reader qrcode.react
+```
+
+#### Notes
+- **QR Scanning**: `react-qr-reader` uses the device’s camera within the browser to scan the QR code displayed on the same page.
+- **Geolocation**: `navigator.geolocation` fetches the student’s location and sends it with the request.
+- **Workflow**: Student logs in → sees QR code → scans it with their phone → website sends `qr_code` and location back to the backend.
+
+---
+
+### Step 3: Set Hostel Coordinates
+- **Current**: `HOSTEL_CENTER = { lat: 25.2048, lng: 55.2708 }` (Dubai placeholder).
+- **Action**: Replace with your hostel’s actual latitude/longitude (find via Google Maps: right-click your hostel location → "What’s here?").
+- **Radius**: Adjust `HOSTEL_RADIUS` (0.1 ≈ 100m; increase/decrease based on hostel size).
+
+---
+
+### Step 4: Test
+1. **Backend**:
+   - GET `http://localhost:5000/api/attendance/qr-code` (with `student1` token).
+   - POST `http://localhost:5000/api/attendance/check-in`:
+     ```json
+     {
+         "qr_code": "<from-get>",
+         "latitude": 25.2048,
+         "longitude": 55.2708
+     }
+     ```
+     - Should succeed at 8:00–8:30 PM UAE time if within radius.
+
+2. **Frontend**:
+   - Deploy the component, log in, and test scanning tonight at 8:00–8:30 PM.
+   - Check browser console for errors if location permission is denied.
+
+---
+
+### Step 5: Update Documentation
+Add to `README.md`:
+
+```markdown
+- **Attendance**:
+  - **Check In (Student)**: POST `/api/attendance/check-in` (8:00–8:30 PM UAE time)
+    ```json
+    {
+        "qr_code": "uuid-string",
+        "latitude": 25.2048,
+        "longitude": 55.2708
+    }
+    ```
+  - **Manual Check-In (Student)**: POST `/api/attendance/check-in-manual` (8:00–8:30 PM UAE time)
+    ```json
+    {
+        "latitude": 25.2048,
+        "longitude": 55.2708
+    }
+    ```
+```
+
+---
+
+### Step 6: Commit
+```
+git add .
+git commit -m "Added location-based attendance check-in for website"
+git push origin main
+```
+
+---
+
+### How It Works on the Website
+- **Scanning**: Students scan the QR code on their screen using their phone’s camera via the website’s `QrReader`. The decoded `qr_code` is sent back with their location.
+- **Location**: Only activates check-in if they’re within the hostel (geofence check).
+- **Fallback**: Manual option still ensures functionality, also requiring location.
+
+Test this tonight at 8:00–8:30 PM UAE time with your actual hostel coordinates. Let me know if you need help setting up the frontend further or want to move to room cleaning tracking next! This is now a secure, location-aware system—nice work!

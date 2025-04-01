@@ -36,3 +36,13 @@ CREATE TABLE rooms (
 -- Add room_id to Users table to link students to rooms
 ALTER TABLE users
 ADD COLUMN room_id INTEGER REFERENCES rooms(id) ON DELETE SET NULL;
+
+-- Create Attendance table
+CREATE TABLE attendance (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    status VARCHAR(20) DEFAULT 'absent',  -- 'present', 'absent', 'on_leave'
+    check_in_time TIMESTAMP,
+    UNIQUE (user_id, date)  -- One record per student per day
+);

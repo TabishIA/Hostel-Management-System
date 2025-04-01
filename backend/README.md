@@ -38,3 +38,16 @@ View All Rooms (Admin): GET /api/rooms (Now includes occupants and count)
     },
     ...
 ]
+
+- **Attendance**:
+  - **View Today’s Attendance (Admin)**: GET `/api/attendance`
+    ```json
+    [{"id": 2, "username": "student1", "room_id": 1, "status": "absent"}, ...]
+
+Mark Attendance (Admin): PUT /api/attendance/mark
+
+{ "user_id": 2, "status": "present", "date": "2025-03-30" } // date optional
+
+Attendance History (Admin): GET /api/attendance/history?start_date=2025-03-01&end_date=2025-03-31
+
+[{"id": 2, "username": "student1", "date": "2025-03-30", "status": "present"}, ...]

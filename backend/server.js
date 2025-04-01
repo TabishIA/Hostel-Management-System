@@ -4,6 +4,7 @@ const userRoutes = require('./routes/users');
 const complaintRoutes = require('./routes/complaints');
 const leaveRoutes = require('./routes/leaves');
 const roomRoutes = require('./routes/rooms');
+const attendanceRoutes = require('./routes/attendance'); 
 
 const app = express();
 app.use(express.json());
@@ -11,7 +12,8 @@ app.use(express.json());
 app.use('/api/users', userRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/leaves', leaveRoutes);
-app.use('/api/rooms', roomRoutes); 
+app.use('/api/rooms', roomRoutes);
+app.use('/api/attendance', attendanceRoutes); 
 
 app.get('/test-db', async (req, res) => {
     try {
