@@ -39,11 +39,16 @@ CREATE TABLE complaints (
 -- Create Leaves table
 CREATE TABLE leaves (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     reason TEXT NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
-    status VARCHAR(20) DEFAULT 'pending'
+    address TEXT NOT NULL,          -- Where student is going
+    family_contact VARCHAR(15) NOT NULL, -- Number warden calls
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP,          -- When warden approves/rejects
+    CONSTRAINT valid_dates CHECK (end_date >= start_date)
 );
 
 -- Create Attendance table

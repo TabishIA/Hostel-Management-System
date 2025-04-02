@@ -87,14 +87,37 @@
   {"room_number": "101", "capacity": 2, "description": "Double room"}
   ```
 
+## Leaves
+- **View All Leaves (Warden)**: `GET /api/leaves` (Warden-only)
+  - Optional: `?status=approved` (filter by status), `?date=2025-04-02` (leaves overlapping a date).
+  ```json
+  [{"id": 1, "user_id": 1, "username": "REG123", "name": "John Doe", "room_number": "101", "reason": "Visiting family", "start_date": "2025-04-05", "end_date": "2025-04-10", "address": "123 Main St", "family_contact": "971509876543", "status": "approved", "submitted_at": "...", "reviewed_at": "..."}]
+  ```
+
+- **View My Leaves (Student)**: GET /api/leaves/my-leaves (Student-only)
+  ```json
+  [{"id": 1, "reason": "Visiting family", "start_date": "2025-04-05", "end_date": "2025-04-10", "address": "123 Main St", "family_contact": "971509876543", "status": "approved", "submitted_at": "...", "reviewed_at": "..."}]
+  ```
+
+- **Submit Leave (Student)**: POST /api/leaves (Student-only)
+  ```json
+  {
+    "reason": "Visiting family for holidays",
+    "start_date": "2025-04-05",
+    "end_date": "2025-04-10",
+    "address": "123 Main St, Hometown",
+    "family_contact": "971509876543"
+  }
+  ```
+
+- **Approve/Reject Leave (Warden)**: PUT /api/leaves/:id (Warden-only)
+  ```json
+  {"status": "approved"} // or "rejected"
+  ```
+
 ## Complaints
 - **View Complaints**: `GET /api/complaints`
 - **Submit Complaint**: `POST /api/complaints`
-  - *Note*: Placeholder—implement as needed.
-
-## Leaves
-- **View Leaves**: `GET /api/leaves`
-- **Submit Leave**: `POST /api/leaves`
   - *Note*: Placeholder—implement as needed.
 
 # .env Format
