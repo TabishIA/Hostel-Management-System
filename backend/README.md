@@ -116,9 +116,38 @@
   ```
 
 ## Complaints
-- **View Complaints**: `GET /api/complaints`
-- **Submit Complaint**: `POST /api/complaints`
-  - *Note*: Placeholder—implement as needed.
+- **View All Complaints (Warden)**: `GET /api/complaints` (Warden-only)
+  - Optional filters: `?status=pending` (e.g., `pending`, `in_progress`, `warden_approved`, `resolved`), `?category=plumbing` (e.g., `plumbing`, `electrical`, `furniture`, `other`), `?room_number=101`.
+  ```json
+  [{"id": 1, "user_id": 1, "username": "REG123", "name": "John Doe", "room_number": "101", "category": "plumbing", "description": "Water leakage", "status": "resolved", "submitted_at": "...", "updated_at": "...", "warden_approved_at": "...", "student_approved_at": "..."}]
+  ```
+
+ - **View My Complaints (Student)**: GET /api/complaints/my-complaints (Student-only)
+ ```json
+ [{"id": 1, "room_number": "101", "category": "plumbing", "description": "Water leakage", "status": "resolved", "submitted_at": "...", "updated_at": "...", "warden_approved_at": "...", "student_approved_at": "..."}]
+ ```
+
+ - **Submit Complaint (Student)**: POST /api/complaints (Student-only)
+ ```json
+ {
+    "category": "plumbing", // 'plumbing', 'electrical', 'furniture', 'other'
+    "description": "Water leakage in bathroom sink"
+ }
+ ```
+ Auto-fills room_number from user’s profile.
+
+ - **Update Complaint Status (Warden)**: PUT /api/complaints/:id (Warden-only)
+ ```json
+ {"status": "in_progress"} // 'pending', 'in_progress', 'warden_approved'
+ ```
+ Sets warden_approved_at when status is "warden_approved".
+
+ - **Confirm Resolution (Student)**: PUT /api/complaints/:id/confirm (Student-only)
+ No body required; changes status to "resolved" if "warden_approved".
+ Only the complaint’s submitter can confirm.
+ ```json
+ {"id": 1, "status": "resolved", "student_approved_at": "2025-04-02T..."}
+ ```
 
 # .env Format
 Create a `.env` file in the `backend/` directory with:

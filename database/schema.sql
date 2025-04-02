@@ -30,10 +30,15 @@ CREATE TABLE users (
 -- Create Complaints table
 CREATE TABLE complaints (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),  -- Links to users table
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    room_number VARCHAR(10) REFERENCES rooms(room_number) ON DELETE SET NULL,
+    category VARCHAR(50) NOT NULL CHECK (category IN ('plumbing', 'electrical', 'furniture', 'other')),
     description TEXT NOT NULL,
-    status VARCHAR(20) DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'warden_approved', 'resolved')),
+    submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    warden_approved_at TIMESTAMP, -- Warden marks as fixed
+    student_approved_at TIMESTAMP -- Student confirms resolution
 );
 
 -- Create Leaves table
